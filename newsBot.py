@@ -34,6 +34,12 @@ botHelp = """
 bot = telebot.TeleBot(botToken, parse_mode = None)
 #bot = telebot.TeleBot(botToken)
 
+def regNewUser(message):
+    """ registration new user"""
+    userId = message.from_user.id
+    name = message.text
+    msg="Пользователь "+name+" зарегистрирован"
+    bot.send_message(message.from_user.id, msg, parse_mode=None)
 
 @bot.message_handler(commands=['start'])
 def startCommand(message):
@@ -65,7 +71,7 @@ def getCatCommand(message, isPrint = True):
         sqlConn.commit()
         cursor.close()
     except sqlite3.Error as error:
-        error
+        print(error)
     finally:
         if sqlConn:
             sqlConn.close()
@@ -117,42 +123,7 @@ def getKeyCommand(message, isPrint = True):
 
 
 
-def initDB():
-    """Подключение к БД и создание таблиц"""
-    try:
-        sqlConn = sqlite3.connect('newsBot.db')
-        sqlCreateTableUsers = '''CREATE TABLE IF NOT EXISTS "users" (
-                                    "id"	INTEGER NOT NULL,
-                                    "name"	TEXT NOT NULL,
-                                    PRIMARY KEY("id" AUTOINCREMENT));'''
 
-        sqlCreateTableCategories = '''CREATE TABLE IF NOT EXISTS "categories" (
-                                    "id"	INTEGER NOT NULL,
-                                    "name"	TEXT NOT NULL,
-                                    "user_id"	INTEGER NOT NULL,
-                                    PRIMARY KEY("id" AUTOINCREMENT)
-                                );'''
-        sqlCreateTableKeywords = '''CREATE TABLE IF NOT EXISTS "keywords" (
-                                    "id"	INTEGER NOT NULL,
-                                    "name"	TEXT NOT NULL,
-                                    "user_id"	INTEGER NOT NULL,
-                                    PRIMARY KEY("id" AUTOINCREMENT)
-                                );'''
-        cursor = sqlConn.cursor()
-        cursor.execute(sqlCreateTableUsers)
-        sqlConn.commit()
-        cursor.execute(sqlCreateTableCategories)
-        sqlConn.commit()
-        cursor.execute(sqlCreateTableKeywords)
-        sqlConn.commit()
-        cursor.close()
-
-    except sqlite3.Error as error:
-        error
-
-    finally:
-        if (sqlConn):
-            sqlConn.close()
 
 def keyExist(key,userId):
     rows = list()
@@ -400,6 +371,9 @@ def getNewsCommand(message):
         publishedAt = listNews[i]["publishedAt"]
         bot.send_message(message.from_user.id,
                          f"{title}\n\n{description}\n{url}\n{publishedAt}",disable_web_page_preview=True)
+def check_server():
+    pass
 
-initDB()
+
+check_server()
 bot.polling()

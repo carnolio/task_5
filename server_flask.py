@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
-
+import sqlite3
 """
+pip3 install flask
 Сервер:
 Предоставляет REST API для бота:
 /users/ для регистрации пользователей.
@@ -13,13 +14,159 @@ from flask import Flask, jsonify, request
 PS. для получения/добавления/удаления используйте HTTP глаголы.
 
 """
+app = Flask(__name__)
+botToken = "1700154841:AAEqEXDBhc4gZi02t4vttt6ZW5J6xKnYgPM"
+newsApiKey = "7e40013ca7ea498589545453e4cea074"
+carnolioId = "124023217"
+categoryList = ['business', 'entertainment', 'general', 'health', 'science', 'sports', 'technology']
+
+
+def get_user_category(message, isPrint=True):
+    '''getcat'''
+    userCats = list()
+    rows = list()
+    try:
+        sqlConn = sqlite3.connect('newsBot.db')
+        cursor = sqlConn.cursor()
+        sqlSelectCats = f"SELECT name FROM categories WHERE user_id = {message.from_user.id}"
+        #data_tuple = (,)
+        cursor.execute(sqlSelectCats)
+        rows = cursor.fetchall()
+        sqlConn.commit()
+        cursor.close()
+    except sqlite3.Error as error:
+        print(error)
+    finally:
+        if sqlConn:
+            sqlConn.close()
+        if len(rows) > 0:
+            #print(rows)
+            for item in rows:
+                #print(item[0])
+                userCats.append(item[0])
+                if isPrint:
+                    #bot.send_message(message.from_user.id, item[0], parse_mode=None)
+                    return message.from_user.id, item[0]
+                return userCats
+        else:
+            return jsonify(message.from_user.id, "Нет подписок на категории")
+            #bot.send_message(message.from_user.id, "Нет подписок на категории", parse_mode=None)
+
+def initDB():
+    """Подключение к БД и создание таблиц"""
+    try:
+        sqlConn = sqlite3.connect('newsBot.db')
+        sqlCreateTableUsers = '''CREATE TABLE IF NOT EXISTS "users" (
+                                 "id"	INTEGER NOT NULL, "name" TEXT NOT NULL, PRIMARY KEY("id" AUTOINCREMENT));'''
+
+        sqlCreateTableCategories = '''CREATE TABLE IF NOT EXISTS "categories" (
+                                    "id"	INTEGER NOT NULL, "name" TEXT NOT NULL,
+                                    "user_id"	INTEGER NOT NULL, PRIMARY KEY("id" AUTOINCREMENT) );'''
+
+        sqlCreateTableKeywords = '''CREATE TABLE IF NOT EXISTS "keywords" ("id"	INTEGER NOT NULL,
+                                 "name"	TEXT NOT NULL, "user_id" INTEGER NOT NULL, PRIMARY KEY("id" AUTOINCREMENT));'''
+        cursor = sqlConn.cursor()
+        cursor.execute(sqlCreateTableUsers)
+        sqlConn.commit()
+        cursor.execute(sqlCreateTableCategories)
+        sqlConn.commit()
+        cursor.execute(sqlCreateTableKeywords)
+        sqlConn.commit()
+        cursor.close()
+
+    except sqlite3.Error as error:
+        print(error)
+
+    finally:
+        if (sqlConn):
+            sqlConn.close()
+
 @app.route('/users', methods=['GET','POST'])
+def users(userID,name):
+    """ registration new user"""
+    #userId = message.from_user.id
+    #name = message.text
+    try:
+        sqlConn = sqlite3.connect('newsBot.db')
+        cursor = sqlConn.cursor()
+        sqlInsertNewUser = f"INSERT INTO users (id, name) VALUES ({userID}, {name});"
+        cursor.execute(sqlInsertNewUser)
+        sqlConn.commit()
+        cursor.close()
+        msg = "Пользователь " + name + " зарегистрирован"
+        #bot.send_message(message.from_user.id, msg, parse_mode=None)
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite", error)
+    finally:
+        if sqlConn:
+            sqlConn.close()
 
 @app.route('/subscriptions/categories/', methods=['GET','POST','DELETE'])
+def subscriptions_categories(message, isPrint = True):
+    '''getcat'''
+    userCats = list()
+    rows = list()
+    try:
+        sqlConn = sqlite3.connect('newsBot.db')
+        cursor = sqlConn.cursor()
+        sqlSelectCats = f"SELECT name FROM categories WHERE user_id = {message.from_user.id}"
+        #data_tuple = (message.from_user.id,)
+        cursor.execute(sqlSelectCats)
+        rows = cursor.fetchall()
+        sqlConn.commit()
+        cursor.close()
+    except sqlite3.Error as error:
+        print(error)
+    finally:
+        if sqlConn:
+            sqlConn.close()
+        if len(rows) > 0:
+            #print(rows)
+            for item in rows:
+                #print(item[0])
+                userCats.append(item[0])
+                if isPrint:
+                    #bot.send_message(message.from_user.id, '\n '.join(userCats), parse_mode=None)
+                    return jsonify(message.from_user.id, '\n '.join(userCats))
+                return jsonify(userCats)
+        else:
+            #bot.send_message(message.from_user.id, "Нет подписок на категории", parse_mode=None)
+            return jsonify(message.from_user.id, "Нет подписок на категории")
 
 @app.route('/subscriptions/keywords/', methods=['GET','POST','DELETE'])
-
+def subscriptions_keywords(message, isPrint=True):
+#    def getKeyCommand(message, isPrint=True):
+    '''getkey'''
+    listKeyword = []
+    rows = []
+    try:
+        sqlConn = sqlite3.connect('newsBot.db')
+        cursor = sqlConn.cursor()
+        sqlSelectKeys = """SELECT name FROM keywords WHERE user_id = ?"""
+        data_tuple = (message.from_user.id,)
+        cursor.execute(sqlSelectKeys, data_tuple)
+        rows = cursor.fetchall()
+        sqlConn.commit()
+        cursor.close()
+    except sqlite3.Error as error:
+        print(error)
+    finally:
+        if sqlConn:
+            sqlConn.close()
+        if len(rows) > 0:
+            for item in rows:
+                listKeyword.append(item[0])
+            if isPrint:
+                #bot.send_message(message.from_user.id, '\n '.join(listKeyword), parse_mode=None)
+                return jsonify(message.from_user.id, '\n '.join(listKeyword))
+            return listKeyword
+        else:
+            #bot.send_message(message.from_user.id, "Нет ключевых слов", parse_mode=None)
+            return jsonify(message.from_user.id, "Нет ключевых слов")
 @app.route('/news/', methods=['GET','POST','DELETE'])
+def news():
+    pass
+
 
 """
 @app.route('/rest', methods=['GET'])
@@ -42,4 +189,4 @@ def calc():
 """
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=80
+    app.run(host='0.0.0.0', port=8080)
