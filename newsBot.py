@@ -7,7 +7,7 @@
 -Получение списка из 10 наиболее релевантных новостей по активным подпискам.
 '''
 
-import sqlite3, telebot
+import sqlite3, telebot, requests
 from newsapi import NewsApiClient
 
 botToken = "1700154841:AAEqEXDBhc4gZi02t4vttt6ZW5J6xKnYgPM"
@@ -57,34 +57,13 @@ def helpCommand(message):
 
 
 @bot.message_handler(commands=['getcat'])
-def getCatCommand(message, isPrint = True):
+def getCatCommand(message):
     '''getcat'''
-    userCats = list()
-    rows = list()
-    try:
-        sqlConn = sqlite3.connect('newsBot.db')
-        cursor = sqlConn.cursor()
-        sqlSelectCats = """SELECT name FROM categories WHERE user_id = ?"""
-        data_tuple = (message.from_user.id,)
-        cursor.execute(sqlSelectCats, data_tuple)
-        rows = cursor.fetchall()
-        sqlConn.commit()
-        cursor.close()
-    except sqlite3.Error as error:
-        print(error)
-    finally:
-        if sqlConn:
-            sqlConn.close()
-        if len(rows) > 0:
-            #print(rows)
-            for item in rows:
-                #print(item[0])
-                userCats.append(item[0])
-                if isPrint:
-                    bot.send_message(message.from_user.id, item[0], parse_mode=None)
-                return userCats
-        else:
-            bot.send_message(message.from_user.id, "Нет подписок на категории", parse_mode=None)
+    user_id = message.from_user.id
+    data = {'user_id': user_id}
+    r = requests.get(url='HTTP://localhost:8080/subscriptions/categories/', params=data)
+    print(' '.join(r.json()))
+    bot.send_message(message.from_user.id, r.json(), parse_mode=None)
 
 @bot.message_handler(commands=['getcatlist'])
 def getCatListCommand(message):
