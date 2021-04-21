@@ -71,32 +71,13 @@ def getCatListCommand(message):
     bot.send_message(message.from_user.id, '\n '.join(categoryList), parse_mode=None)
 
 @bot.message_handler(commands=['getkey'])
-def getKeyCommand(message, isPrint = True):
+def getKeyCommand(message):
     '''getkey'''
-    listKeyword = []
-    rows = []
-    try:
-        sqlConn = sqlite3.connect('newsBot.db')
-        cursor = sqlConn.cursor()
-        sqlSelectKeys = """SELECT name FROM keywords WHERE user_id = ?"""
-        data_tuple = (message.from_user.id,)
-        cursor.execute(sqlSelectKeys, data_tuple)
-        rows = cursor.fetchall()
-        sqlConn.commit()
-        cursor.close()
-    except sqlite3.Error as error:
-        error
-    finally:
-        if sqlConn:
-            sqlConn.close()
-        if len(rows) > 0:
-            for item in rows:
-                listKeyword.append(item[0])
-            if isPrint:
-                bot.send_message(message.from_user.id, '\n '.join(listKeyword), parse_mode=None)
-            return listKeyword
-        else:
-            bot.send_message(message.from_user.id, "Нет ключевых слов", parse_mode=None)
+    user_id = message.from_user.id
+    data = {'user_id': user_id}
+    r = requests.get(url='HTTP://localhost:8080/subscriptions/keywords/', params=data)
+    print(' '.join(r.json()))
+    bot.send_message(user_id, r.json(), parse_mode=None)
 
 
 
@@ -104,43 +85,6 @@ def getKeyCommand(message, isPrint = True):
 
 
 
-def keyExist(key,userId):
-    rows = list()
-    '''if key exist'''
-    #print("Ищем дубликаты ключей")
-    sqlConn = sqlite3.connect('newsBot.db')
-    cursor = sqlConn.cursor()
-    sqlSelectKeys = """SELECT * FROM keywords WHERE user_id = ? and name = ?"""
-    data_tuple = (userId,key)
-    cursor.execute(sqlSelectKeys, data_tuple)
-    #print(cursor.execute(sqlSelectKeys, data_tuple))
-    rows = cursor.fetchall()
-    sqlConn.commit()
-    cursor.close()
-
-    if len(rows) > 0:
-        return True
-    else:
-        return False
-
-def catExist(cat,userId):
-    rows = list()
-    '''if key exist'''
-
-    sqlConn = sqlite3.connect('newsBot.db')
-    cursor = sqlConn.cursor()
-    sqlSelectCats = """SELECT name FROM categories WHERE user_id = ? and name = ?"""
-    data_tuple = (userId,cat)
-    cursor.execute(sqlSelectCats, data_tuple)
-    rows = cursor.fetchall()
-    sqlConn.commit()
-    cursor.close()
-    #print(rows)
-    if len(rows) > 0:
-        #print("cat exist",rows)
-        return True
-    else:
-        return False
 
 
 @bot.message_handler(commands=['addkey'])

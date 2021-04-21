@@ -22,14 +22,45 @@ newsApiKey = "7e40013ca7ea498589545453e4cea074"
 carnolioId = "124023217"
 categoryList = ['business', 'entertainment', 'general', 'health', 'science', 'sports', 'technology']
 
+def keyExist(key,user_id):
+    rows = list()
+    '''if key exist'''
+    sqlConn = sqlite3.connect('newsBot.db')
+    cursor = sqlConn.cursor()
+    sqlSelectKeys = f"SELECT * FROM keywords WHERE user_id = {user_id} and name = {key}"
+    cursor.execute(sqlSelectKeys)
+    #print(cursor.execute(sqlSelectKeys, data_tuple))
+    rows = cursor.fetchall()
+    sqlConn.commit()
+    cursor.close()
+    if len(rows) > 0:
+        return True
+    else:
+        return False
 
+def catExist(cat,user_id):
+    rows = list()
+    '''if key exist'''
+    sqlConn = sqlite3.connect('newsBot.db')
+    cursor = sqlConn.cursor()
+    sqlSelectCats = f"SELECT name FROM categories WHERE user_id = {user_id} and name = {cat}"
+    cursor.execute(sqlSelectCats)
+    rows = cursor.fetchall()
+    sqlConn.commit()
+    cursor.close()
+    #print(rows)
+    if len(rows) > 0:
+        #print("cat exist",rows)
+        return True
+    else:
+        return False
 
 def init_db():
     """Подключение к БД и создание таблиц"""
     try:
         sqlConn = sqlite3.connect('newsBot.db')
         sqlCreateTableUsers = '''CREATE TABLE IF NOT EXISTS "users" (
-                                 "id"	INTEGER NOT NULL, "name" TEXT NOT NULL, PRIMARY KEY("id" AUTOINCREMENT));'''
+                                 "id"	INTEGER NOT NULL,  PRIMARY KEY("id" AUTOINCREMENT));'''
 
         sqlCreateTableCategories = '''CREATE TABLE IF NOT EXISTS "categories" (
                                     "id"	INTEGER NOT NULL, "name" TEXT NOT NULL,
@@ -51,26 +82,39 @@ def init_db():
         if (sqlConn):
             sqlConn.close()
 
-@app.route('/users', methods=['GET','POST'])
-def users(user_id,name):
-    """ registration new user"""
-    #userId = message.from_user.id
-    #name = message.text
+def get_key(user_id):
+    listKeyword = []
+    rows = []
     try:
         sqlConn = sqlite3.connect('newsBot.db')
         cursor = sqlConn.cursor()
-        sqlInsertNewUser = f"INSERT INTO users (id, name) VALUES ({user_id}, {name});"
-        cursor.execute(sqlInsertNewUser)
+        sqlSelectKeys = f"SELECT name FROM keywords WHERE user_id = {user_id}"
+        cursor.execute(sqlSelectKeys)
+        rows = cursor.fetchall()
         sqlConn.commit()
         cursor.close()
-        msg = "Пользователь " + name + " зарегистрирован"
-        #bot.send_message(message.from_user.id, msg, parse_mode=None)
     except sqlite3.Error as error:
-        print("Ошибка при работе с SQLite", error)
+        print(error)
     finally:
         if sqlConn:
             sqlConn.close()
+        if len(rows) > 0:
+            for item in rows:
+                listKeyword.append(item[0])
+            #if isPrint:
+            #    bot.send_message(message.from_user.id, '\n '.join(listKeyword), parse_mode=None)
+        else:
+            #bot.send_message(message.from_user.id, "Нет ключевых слов", parse_mode=None)
+            listKeyword.append("Нет ключевых слов")
+        return listKeyword
 
+
+
+
+
+@app.route('/users', methods=['GET','POST'])
+def users(user_id):
+    pass
 
 def get_cat(user_id):
     '''getcat'''
@@ -94,11 +138,10 @@ def get_cat(user_id):
             #print(rows)
             for item in rows:
                 userCats.append(item[0])
-            return userCats
         #если ничего не пришло
         else:
             userCats.append("Нет подписок на категории")
-            return userCats
+        return userCats
 
 
 
@@ -119,35 +162,18 @@ def subscriptions_categories():
 
 
 @app.route('/subscriptions/keywords/', methods=['GET','POST','DELETE'])
-def subscriptions_keywords(message, isPrint=True):
-#    def getKeyCommand(message, isPrint=True):
-    '''getkey'''
-    listKeyword = []
-    rows = []
-    try:
-        sqlConn = sqlite3.connect('newsBot.db')
-        cursor = sqlConn.cursor()
-        sqlSelectKeys = """SELECT name FROM keywords WHERE user_id = ?"""
-        data_tuple = (message.from_user.id,)
-        cursor.execute(sqlSelectKeys, data_tuple)
-        rows = cursor.fetchall()
-        sqlConn.commit()
-        cursor.close()
-    except sqlite3.Error as error:
-        print(error)
-    finally:
-        if sqlConn:
-            sqlConn.close()
-        if len(rows) > 0:
-            for item in rows:
-                listKeyword.append(item[0])
-            if isPrint:
-                #bot.send_message(message.from_user.id, '\n '.join(listKeyword), parse_mode=None)
-                return jsonify(message.from_user.id, '\n '.join(listKeyword))
-            return listKeyword
-        else:
-            #bot.send_message(message.from_user.id, "Нет ключевых слов", parse_mode=None)
-            return jsonify(message.from_user.id, "Нет ключевых слов")
+def subscriptions_keywords():
+    #add_cat
+    if request.method == 'POST':
+        pass
+    #del_cat
+    elif request.method == 'DELETE':
+        pass
+    #get_cat
+    elif request.method == 'GET':
+        user_id= request.args.get('user_id')
+        return jsonify(get_key(user_id))
+
 @app.route('/news/', methods=['GET','POST','DELETE'])
 def news():
     pass
@@ -175,4 +201,4 @@ def calc():
 
 if __name__ == '__main__':
     init_db()
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='localhost', port=8080)
